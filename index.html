@@ -1,41 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>MACS Aviator Bet</title>
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to right, #1c1c1c, #2b5876);
+      background: linear-gradient(to right, #1f1c2c, #928dab);
       color: white;
       text-align: center;
     }
 
     h1 {
-      margin-top: 25px;
-      font-size: 38px;
+      font-size: 40px;
       color: #00ffd9;
-      text-shadow: 1px 1px 4px #000;
-    }
-
-    .sky {
-      position: relative;
-      height: 250px;
       margin-top: 20px;
     }
 
-    .plane-wrapper {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      top: 50px;
-      text-align: center;
+    .sky {
+      height: 250px;
+      position: relative;
+      overflow: hidden;
     }
 
     .plane {
-      font-size: 60px;
+      font-size: 50px;
+      position: absolute;
+      top: 100px;
+      left: 0;
+      animation: flyAnimation linear forwards;
+    }
+
+    @keyframes flyAnimation {
+      0% { left: -100px; }
+      100% { left: 100%; }
     }
 
     .blast {
@@ -44,15 +43,15 @@
     }
 
     @keyframes shake {
-      0%, 100% { transform: translateX(-50%) translate(0, 0); }
-      25% { transform: translateX(-50%) translate(-5px, 5px); }
-      50% { transform: translateX(-50%) translate(5px, -5px); }
-      75% { transform: translateX(-50%) translate(-5px, 5px); }
+      0%, 100% { transform: translate(0, 0); }
+      25% { transform: translate(-4px, 4px); }
+      50% { transform: translate(4px, -4px); }
+      75% { transform: translate(-4px, 4px); }
     }
 
     .timer {
-      font-size: 24px;
-      margin-top: 10px;
+      font-size: 22px;
+      margin-top: 5px;
       color: #ffe600;
     }
 
@@ -61,32 +60,27 @@
     }
 
     input, button {
-      padding: 12px 20px;
+      padding: 10px 18px;
       font-size: 18px;
       border: none;
-      border-radius: 8px;
+      border-radius: 6px;
       margin: 10px;
-    }
-
-    input {
-      width: 220px;
     }
 
     button {
       background-color: #00ffd9;
       color: black;
       font-weight: bold;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
       cursor: pointer;
     }
 
     button:hover {
-      background-color: #00c6a7;
+      background-color: #00c4a4;
     }
 
     #result {
       font-size: 22px;
-      margin-top: 20px;
+      margin-top: 15px;
       font-weight: bold;
     }
 
@@ -98,120 +92,112 @@
 </head>
 <body>
 
-  <h1>🛫 MACS Aviator Bet 🎰</h1>
+  <h1>💸 MACS Aviator Bet 🛫</h1>
 
   <div class="sky">
-    <div class="plane-wrapper">
-      <div class="plane" id="plane">🛩️</div>
-      <div class="timer" id="flightTimer">⏱️ Time: 0s</div>
-    </div>
+    <div class="plane" id="plane">🛩️</div>
+    <div class="timer" id="flightTimer">⏱️ Time: 0s</div>
   </div>
 
   <div class="controls">
-    <label for="userTime">Predict Blast Time (in seconds):</label><br/>
-    <input type="number" id="userTime" placeholder="e.g., 8" min="1" max="20"/>
+    <label>Predict Blast Time (seconds):</label><br/>
+    <input type="number" id="userTime" min="1" max="20" placeholder="e.g., 10"/>
     <button onclick="placeBet()">Place Bet</button>
     <div id="result"></div>
     <div id="cooldown"></div>
   </div>
 
-  <!-- 🔊 Blast Sound -->
+  <!-- Blast Sound -->
   <audio id="blastSound" preload="auto">
-    <source src="https://assets.mixkit.co/sfx/preview/mixkit-explosion-1612.mp3" type="audio/mpeg">
+    <source src="https://www.soundjay.com/explosion/explosion-01.mp3" type="audio/mpeg">
   </audio>
 
   <script>
     let betCount = 0;
-    let canPlaceBet = true;
-    let flightTime = 0;
+    let flightInProgress = false;
+    let flightTimer = 0;
     let timerInterval;
-    let currentUserTime = null;
+    let userPrediction = null;
 
-    function resetPlaneUI() {
-      const plane = document.getElementById("plane");
-      plane.classList.remove("blast");
-      plane.textContent = "🛩️";
+    function resetUI() {
+      document.getElementById("plane").className = "plane";
+      document.getElementById("plane").style.animation = "flyAnimation linear forwards";
+      document.getElementById("plane").style.animationDuration = "0s"; // reset duration
+      document.getElementById("plane").textContent = "🛩️";
       document.getElementById("flightTimer").textContent = "⏱️ Time: 0s";
+      document.getElementById("result").textContent = "";
+      userPrediction = null;
     }
 
     function placeBet() {
-      if (!canPlaceBet) {
-        document.getElementById("result").textContent = "⛔ Time out. Try before next flight.";
+      if (flightInProgress) {
+        document.getElementById("result").textContent = "⛔ Can't bet now! Try in next flight.";
         return;
       }
 
-      const userInput = parseInt(document.getElementById("userTime").value);
-      if (!userInput || userInput < 1 || userInput > 20) {
-        alert("⛔ Enter valid prediction time between 1 and 20 seconds");
+      const time = parseInt(document.getElementById("userTime").value);
+      if (!time || time < 1 || time > 20) {
+        alert("Enter a valid time between 1 and 20 seconds");
         return;
       }
 
-      currentUserTime = userInput;
-      canPlaceBet = false;
-      startFlight(userInput);
+      userPrediction = time;
+      startFlight();
     }
 
-    function startFlight(userInput) {
-      resetPlaneUI();
+    function startFlight() {
+      resetUI();
       betCount++;
-      flightTime = 0;
-      let isWinningBet = betCount % 10 === 0;
+      flightInProgress = true;
+      document.getElementById("plane").style.animationDuration = "20s";
 
-      let blastTime;
-      if (isWinningBet) {
-        blastTime = userInput + Math.floor(Math.random() * 3 + 1);
-      } else {
-        blastTime = Math.max(1, userInput - Math.floor(Math.random() * 3 + 1));
-      }
-
-      document.getElementById("result").textContent = "🚀 Plane is flying...";
-      document.getElementById("cooldown").textContent = "";
+      let isWinning = betCount % 10 === 0;
+      let blastTime = isWinning ? userPrediction + Math.floor(Math.random() * 2 + 1)
+                                 : Math.max(1, userPrediction - Math.floor(Math.random() * 3 + 1));
 
       timerInterval = setInterval(() => {
-        flightTime++;
-        document.getElementById("flightTimer").textContent = `⏱️ Time: ${flightTime}s`;
+        flightTimer++;
+        document.getElementById("flightTimer").textContent = `⏱️ Time: ${flightTimer}s`;
       }, 1000);
 
       setTimeout(() => {
         clearInterval(timerInterval);
-        const plane = document.getElementById("plane");
-        plane.classList.add("blast");
-        plane.textContent = "💥";
+        document.getElementById("plane").classList.add("blast");
+        document.getElementById("plane").textContent = "💥";
         document.getElementById("blastSound").play();
 
-        if ((isWinningBet && blastTime > currentUserTime) || (!isWinningBet && blastTime <= currentUserTime)) {
-          document.getElementById("result").textContent = `🎉 You Won! Plane blasted at ${blastTime}s`;
+        if ((isWinning && blastTime > userPrediction) || (!isWinning && blastTime <= userPrediction)) {
+          document.getElementById("result").textContent = `🎉 You Won! Blast at ${blastTime}s`;
         } else {
-          document.getElementById("result").textContent = `😞 You Lost! Plane blasted at ${blastTime}s`;
+          document.getElementById("result").textContent = `😞 You Lost! Blast at ${blastTime}s`;
         }
 
+        flightInProgress = false;
         startCooldown();
       }, blastTime * 1000);
     }
 
     function startCooldown() {
-      let countdown = 5;
-      document.getElementById("cooldown").textContent = `🕒 Next flight in ${countdown} seconds...`;
+      let cooldown = 5;
+      document.getElementById("cooldown").textContent = `🕒 Next flight in ${cooldown} sec`;
 
-      const cooldownTimer = setInterval(() => {
-        countdown--;
-        if (countdown > 0) {
-          document.getElementById("cooldown").textContent = `🕒 Next flight in ${countdown} seconds...`;
+      const countdown = setInterval(() => {
+        cooldown--;
+        if (cooldown > 0) {
+          document.getElementById("cooldown").textContent = `🕒 Next flight in ${cooldown} sec`;
         } else {
-          clearInterval(cooldownTimer);
-          document.getElementById("cooldown").textContent = "✅ Ready for next flight!";
-          canPlaceBet = true;
-          currentUserTime = null;
-          resetPlaneUI();
-          setTimeout(() => {
-            if (!document.getElementById("userTime").value) {
-              document.getElementById("result").textContent = "💡 No bet placed. New round started!";
-            }
-            // auto flight restart (if no user bet placed)
-            startFlight(99); // dummy high time
-          }, 1000);
+          clearInterval(countdown);
+          document.getElementById("cooldown").textContent = "✅ Ready!";
+          flightTimer = 0;
+          resetUI();
+          startFlight(); // auto fly
         }
       }, 1000);
+    }
+
+    // Auto start on load
+    window.onload = () => {
+      startFlight();
     }
   </script>
 
