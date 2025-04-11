@@ -3,55 +3,74 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Aviator Game</title>
+  <title>Aviator Boom Game</title>
   <style>
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background: radial-gradient(#1f1f1f, #121212);
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom, #141e30, #243b55);
       color: white;
       text-align: center;
       overflow: hidden;
     }
 
     h1 {
-      margin-top: 20px;
+      margin-top: 30px;
+      font-size: 36px;
+      color: #00ffd9;
     }
 
     .plane {
       font-size: 40px;
       position: absolute;
-      top: 150px;
+      top: 120px;
       left: 0;
       transition: left linear;
     }
 
     .blast {
-      font-size: 40px;
       color: red;
       animation: shake 0.3s infinite;
     }
 
     @keyframes shake {
-      0% { transform: translate(0, 0); }
-      25% { transform: translate(-3px, 3px); }
-      50% { transform: translate(3px, -3px); }
-      75% { transform: translate(-3px, 3px); }
-      100% { transform: translate(0, 0); }
+      0%, 100% { transform: translate(0, 0); }
+      25% { transform: translate(-5px, 5px); }
+      50% { transform: translate(5px, -5px); }
+      75% { transform: translate(-5px, 5px); }
     }
 
     .controls {
-      margin-top: 250px;
+      position: absolute;
+      bottom: 50px;
+      width: 100%;
     }
 
     input, button {
-      padding: 10px;
+      padding: 12px 20px;
       font-size: 18px;
-      margin: 5px;
+      border: none;
+      border-radius: 6px;
+      margin: 8px;
+    }
+
+    input {
+      width: 200px;
+    }
+
+    button {
+      background-color: #00ffd9;
+      color: black;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background-color: #00c6a7;
     }
 
     #result {
-      font-size: 24px;
+      font-size: 22px;
       margin-top: 20px;
       font-weight: bold;
     }
@@ -59,15 +78,18 @@
 </head>
 <body>
 
-  <h1>✈️ Aviator Betting Game</h1>
+  <h1>✈️ Aviator Boom Game</h1>
   <div class="plane" id="plane">✈️</div>
 
   <div class="controls">
-    <label>Predict Blast Time (in seconds):</label>
+    <label for="userTime">Predict Blast Time (in seconds):</label><br/>
     <input type="number" id="userTime" placeholder="e.g., 8" min="1" max="20"/>
     <button onclick="startGame()">Place Bet</button>
     <div id="result"></div>
   </div>
+
+  <!-- 🔊 Blast Sound -->
+  <audio id="blastSound" src="https://www.soundjay.com/explosion/explosion-02.mp3" preload="auto"></audio>
 
   <script>
     let betCount = 0;
@@ -84,7 +106,7 @@
       resetPlane();
       const userInput = parseInt(document.getElementById("userTime").value);
       if (!userInput || userInput < 1 || userInput > 20) {
-        alert("Enter valid prediction time between 1 and 20 seconds");
+        alert("⛔ Enter valid prediction time between 1 and 20 seconds");
         return;
       }
 
@@ -93,9 +115,9 @@
 
       let blastTime;
       if (isWinningBet) {
-        blastTime = userInput + Math.floor(Math.random() * 5 + 1); // Plane blasts **after** prediction
+        blastTime = userInput + Math.floor(Math.random() * 3 + 1); // blast after predicted time
       } else {
-        blastTime = Math.max(1, userInput - Math.floor(Math.random() * 3 + 1)); // Plane blasts **before**
+        blastTime = Math.max(1, userInput - Math.floor(Math.random() * 3 + 1)); // blast before
       }
 
       const plane = document.getElementById("plane");
@@ -105,10 +127,14 @@
       document.getElementById("result").textContent = "🚀 Plane is flying...";
 
       setTimeout(() => {
-        // blast effect
+        // Play explosion sound
+        document.getElementById("blastSound").play();
+
+        // Blast effect
         plane.classList.add("blast");
         plane.textContent = "💥";
 
+        // Show result
         if ((isWinningBet && blastTime > userInput) || (!isWinningBet && blastTime <= userInput)) {
           document.getElementById("result").textContent = `🎉 You Won! Plane blasted at ${blastTime}s`;
         } else {
