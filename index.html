@@ -3,247 +3,173 @@
 <head>
   <meta charset="UTF-8">
   <title>MACS Aviator Bet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to right, #0f0c29, #302b63, #24243e);
+      background: #101820;
       color: white;
-      text-align: center;
+      overflow: hidden;
     }
 
-    h1 {
-      font-size: 40px;
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #1f1f1f;
+      padding: 15px 30px;
       color: #00ffd9;
-      margin-top: 20px;
+      font-size: 22px;
     }
 
     #balance {
-      position: absolute;
-      top: 20px;
-      right: 30px;
-      font-size: 20px;
       background: #00ffd9;
       color: black;
-      padding: 8px 16px;
-      border-radius: 6px;
+      padding: 5px 15px;
+      border-radius: 8px;
       font-weight: bold;
     }
 
-    .sky {
-      height: 250px;
+    .game-area {
       position: relative;
+      height: 300px;
+      background: linear-gradient(to top, #0c0c0c, #1a1a1a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       overflow: hidden;
-      background: #111;
-      border-top: 4px solid #00ffd9;
-      border-bottom: 4px solid #00ffd9;
     }
 
-    .plane {
-      font-size: 50px;
-      position: absolute;
-      top: 100px;
-      left: 0;
+    .multiplier {
+      font-size: 40px;
+      font-weight: bold;
+      color: #00ff90;
+      animation: pop 0.3s ease-in-out;
     }
 
-    .blast {
-      color: red;
-      animation: shake 0.3s infinite;
-    }
-
-    @keyframes shake {
-      0%, 100% { transform: translate(0, 0); }
-      25% { transform: translate(-5px, 5px); }
-      50% { transform: translate(5px, -5px); }
-      75% { transform: translate(-5px, 5px); }
-    }
-
-    .timer, #cooldown {
-      font-size: 20px;
-      margin-top: 10px;
-      color: #ffe600;
+    @keyframes pop {
+      0% { transform: scale(0.9); }
+      100% { transform: scale(1); }
     }
 
     .controls {
-      margin-top: 30px;
+      background: #181818;
+      padding: 20px;
+      text-align: center;
     }
 
-    input, button {
-      padding: 10px 18px;
+    .controls input, .controls button {
       font-size: 18px;
+      padding: 10px 15px;
+      margin: 10px;
       border: none;
       border-radius: 6px;
-      margin: 10px;
     }
 
-    button {
+    .controls input {
+      width: 150px;
+    }
+
+    .controls button {
       background-color: #00ffd9;
-      color: black;
+      color: #000;
       font-weight: bold;
       cursor: pointer;
     }
 
-    button:hover {
-      background-color: #00c6a7;
-    }
-
-    #result {
-      font-size: 22px;
-      margin-top: 15px;
-      font-weight: bold;
+    .log {
+      font-size: 16px;
+      color: #ccc;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-  <div id="balance">Wallet: ₹1000</div>
-  <h1>💸 MACS Aviator Bet 🛫</h1>
+  <header>
+    <div>MACS Aviator Bet</div>
+    <div id="balance">Wallet: ₹1000</div>
+  </header>
 
-  <div class="sky">
-    <div class="plane" id="plane">🛩️</div>
-    <div class="timer" id="flightTimer">⏱️ Time: 0s</div>
+  <div class="game-area">
+    <div class="multiplier" id="multiplier">x1.00</div>
   </div>
 
   <div class="controls">
-    <label>Predict Blast Time (seconds):</label><br/>
-    <input type="number" id="userTime" min="1" max="20" placeholder="e.g., 10"/>
-    <br/>
-    <label>Enter Bet Amount (₹):</label><br/>
-    <input type="number" id="betAmount" min="1" placeholder="e.g., 50"/>
-    <br/>
+    <input type="number" id="betAmount" placeholder="Enter ₹" min="1">
     <button onclick="placeBet()">Place Bet</button>
-    <div id="result"></div>
-    <div id="cooldown"></div>
+    <button onclick="cashOut()">Cash Out</button>
+    <div class="log" id="log"></div>
   </div>
 
-  <audio id="blastSound" preload="auto">
-    <source src="https://www.soundjay.com/explosion/explosion-01.mp3" type="audio/mpeg">
-  </audio>
-
   <script>
-    let betCount = 0;
-    let flightInterval;
-    let canBet = false;
-    let userPrediction = null;
-    let userAmount = 0;
-    let flightTimer = 0;
-    let timerInterval;
     let balance = 1000;
+    let multiplier = 1.00;
+    let interval;
+    let inFlight = false;
+    let betPlaced = false;
+    let betAmount = 0;
 
-    const plane = document.getElementById("plane");
-    const balanceBox = document.getElementById("balance");
-
-    function resetPlane() {
-      plane.style.left = "0px";
-      plane.textContent = "🛩️";
-      plane.classList.remove("blast");
-    }
-
-    function updateBalanceDisplay() {
-      balanceBox.textContent = `Wallet: ₹${balance}`;
-    }
-
-    function placeBet() {
-      if (!canBet) {
-        document.getElementById("result").textContent = "⛔ Can't bet now! Try in next flight.";
-        return;
-      }
-
-      const time = parseInt(document.getElementById("userTime").value);
-      const amount = parseInt(document.getElementById("betAmount").value);
-
-      if (!time || time < 1 || time > 20) {
-        alert("Enter a valid time between 1 and 20");
-        return;
-      }
-
-      if (!amount || amount < 1 || amount > balance) {
-        alert("Invalid bet amount or not enough balance");
-        return;
-      }
-
-      userPrediction = time;
-      userAmount = amount;
-      document.getElementById("result").textContent = `✅ Bet placed: ₹${amount} on ${time}s`;
+    function updateDisplay() {
+      document.getElementById('balance').innerText = `Wallet: ₹${balance}`;
+      document.getElementById('multiplier').innerText = `x${multiplier.toFixed(2)}`;
     }
 
     function startFlight() {
-      resetPlane();
-      betCount++;
-      userPrediction = null;
-      userAmount = 0;
-      canBet = false;
-      flightTimer = 0;
-
-      let pos = 0;
-      const isWinning = betCount % 10 === 0;
-      const defaultTime = 10;
-      const blastTime = isWinning
-        ? (userPrediction || defaultTime) + Math.floor(Math.random() * 2 + 1)
-        : Math.max(1, (userPrediction || defaultTime) - Math.floor(Math.random() * 3 + 1));
-
-      document.getElementById("result").textContent = "";
-      document.getElementById("cooldown").textContent = "";
-      document.getElementById("flightTimer").textContent = "⏱️ Time: 0s";
-
-      timerInterval = setInterval(() => {
-        flightTimer++;
-        document.getElementById("flightTimer").textContent = `⏱️ Time: ${flightTimer}s`;
-      }, 1000);
-
-      flightInterval = setInterval(() => {
-        if (pos < window.innerWidth - 100) {
-          pos += 5;
-          plane.style.left = pos + "px";
+      multiplier = 1.00;
+      inFlight = true;
+      updateDisplay();
+      interval = setInterval(() => {
+        multiplier += 0.05;
+        updateDisplay();
+        if (multiplier >= Math.random() * 10 + 2) {
+          crash();
         }
-      }, 50);
-
-      setTimeout(() => {
-        clearInterval(flightInterval);
-        clearInterval(timerInterval);
-        plane.classList.add("blast");
-        plane.textContent = "💥";
-        document.getElementById("blastSound").play();
-
-        if (userPrediction && userAmount) {
-          if ((isWinning && blastTime > userPrediction) || (!isWinning && blastTime <= userPrediction)) {
-            balance += userAmount;
-            document.getElementById("result").textContent = `🎉 You Won ₹${userAmount}!`;
-          } else {
-            balance -= userAmount;
-            document.getElementById("result").textContent = `😞 You Lost ₹${userAmount}`;
-          }
-        } else {
-          document.getElementById("result").textContent = `🕹️ No Bet. Blast at ${blastTime}s`;
-        }
-
-        updateBalanceDisplay();
-        startCooldown();
-      }, blastTime * 1000);
+      }, 200);
     }
 
-    function startCooldown() {
-      let countdown = 5;
-      document.getElementById("cooldown").textContent = `🕒 Next flight in ${countdown} seconds...`;
-      canBet = true;
-
-      const cd = setInterval(() => {
-        countdown--;
-        if (countdown > 0) {
-          document.getElementById("cooldown").textContent = `🕒 Next flight in ${countdown} seconds...`;
-        } else {
-          clearInterval(cd);
-          document.getElementById("cooldown").textContent = "";
-          canBet = false;
-          startFlight();
-        }
-      }, 1000);
+    function crash() {
+      clearInterval(interval);
+      inFlight = false;
+      if (betPlaced) {
+        document.getElementById('log').innerText = `💥 Plane crashed at x${multiplier.toFixed(2)}. You lost ₹${betAmount}`;
+        betPlaced = false;
+        betAmount = 0;
+      }
+      setTimeout(startFlight, 3000);
     }
 
-    // Start flight on load
-    setTimeout(() => {
-      startFlight();
-    }, 2000);
+    function placeBet() {
+      if (!inFlight && !betPlaced) {
+        betAmount = parseInt(document.getElementById('betAmount').value);
+        if (betAmount > 0 && betAmount <= balance) {
+          balance -= betAmount;
+          betPlaced = true;
+          document.getElementById('log').innerText = `✅ Bet placed: ₹${betAmount}`;
+          updateDisplay();
+        } else {
+          alert("Invalid bet amount");
+        }
+      } else {
+        alert("Can't place bet during flight or duplicate bet");
+      }
+    }
+
+    function cashOut() {
+      if (inFlight && betPlaced) {
+        const winAmount = betAmount * multiplier;
+        balance += winAmount;
+        document.getElementById('log').innerText = `🏆 Cashed out at x${multiplier.toFixed(2)}. You won ₹${winAmount.toFixed(2)}`;
+        betPlaced = false;
+        betAmount = 0;
+        updateDisplay();
+      } else {
+        alert("No active bet to cash out");
+      }
+    }
+
+    window.onload = startFlight;
   </script>
 
 </body>
