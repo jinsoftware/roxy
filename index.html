@@ -18,6 +18,18 @@
       margin-top: 20px;
     }
 
+    #balance {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      font-size: 20px;
+      background: #00ffd9;
+      color: black;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+
     .sky {
       height: 250px;
       position: relative;
@@ -84,6 +96,7 @@
 </head>
 <body>
 
+  <div id="balance">Wallet: ₹1000</div>
   <h1>💸 MACS Aviator Bet 🛫</h1>
 
   <div class="sky">
@@ -94,6 +107,10 @@
   <div class="controls">
     <label>Predict Blast Time (seconds):</label><br/>
     <input type="number" id="userTime" min="1" max="20" placeholder="e.g., 10"/>
+    <br/>
+    <label>Enter Bet Amount (₹):</label><br/>
+    <input type="number" id="betAmount" min="1" placeholder="e.g., 50"/>
+    <br/>
     <button onclick="placeBet()">Place Bet</button>
     <div id="result"></div>
     <div id="cooldown"></div>
@@ -108,14 +125,22 @@
     let flightInterval;
     let canBet = false;
     let userPrediction = null;
+    let userAmount = 0;
     let flightTimer = 0;
     let timerInterval;
+    let balance = 1000;
+
     const plane = document.getElementById("plane");
+    const balanceBox = document.getElementById("balance");
 
     function resetPlane() {
       plane.style.left = "0px";
       plane.textContent = "🛩️";
       plane.classList.remove("blast");
+    }
+
+    function updateBalanceDisplay() {
+      balanceBox.textContent = `Wallet: ₹${balance}`;
     }
 
     function placeBet() {
@@ -124,28 +149,38 @@
         return;
       }
 
-      const input = parseInt(document.getElementById("userTime").value);
-      if (!input || input < 1 || input > 20) {
+      const time = parseInt(document.getElementById("userTime").value);
+      const amount = parseInt(document.getElementById("betAmount").value);
+
+      if (!time || time < 1 || time > 20) {
         alert("Enter a valid time between 1 and 20");
         return;
       }
 
-      userPrediction = input;
-      document.getElementById("result").textContent = "✅ Bet placed!";
+      if (!amount || amount < 1 || amount > balance) {
+        alert("Invalid bet amount or not enough balance");
+        return;
+      }
+
+      userPrediction = time;
+      userAmount = amount;
+      document.getElementById("result").textContent = `✅ Bet placed: ₹${amount} on ${time}s`;
     }
 
     function startFlight() {
       resetPlane();
       betCount++;
       userPrediction = null;
+      userAmount = 0;
       canBet = false;
       flightTimer = 0;
 
       let pos = 0;
       const isWinning = betCount % 10 === 0;
+      const defaultTime = 10;
       const blastTime = isWinning
-        ? getUserOrDefault() + Math.floor(Math.random() * 2 + 1)
-        : Math.max(1, getUserOrDefault() - Math.floor(Math.random() * 3 + 1));
+        ? (userPrediction || defaultTime) + Math.floor(Math.random() * 2 + 1)
+        : Math.max(1, (userPrediction || defaultTime) - Math.floor(Math.random() * 3 + 1));
 
       document.getElementById("result").textContent = "";
       document.getElementById("cooldown").textContent = "";
@@ -170,22 +205,21 @@
         plane.textContent = "💥";
         document.getElementById("blastSound").play();
 
-        if (userPrediction) {
+        if (userPrediction && userAmount) {
           if ((isWinning && blastTime > userPrediction) || (!isWinning && blastTime <= userPrediction)) {
-            document.getElementById("result").textContent = `🎉 You Won! Blast at ${blastTime}s`;
+            balance += userAmount;
+            document.getElementById("result").textContent = `🎉 You Won ₹${userAmount}!`;
           } else {
-            document.getElementById("result").textContent = `😞 You Lost! Blast at ${blastTime}s`;
+            balance -= userAmount;
+            document.getElementById("result").textContent = `😞 You Lost ₹${userAmount}`;
           }
         } else {
           document.getElementById("result").textContent = `🕹️ No Bet. Blast at ${blastTime}s`;
         }
 
+        updateBalanceDisplay();
         startCooldown();
       }, blastTime * 1000);
-    }
-
-    function getUserOrDefault() {
-      return userPrediction ? userPrediction : 10;
     }
 
     function startCooldown() {
@@ -206,10 +240,10 @@
       }, 1000);
     }
 
-    // Start first flight after 3s on load
+    // Start flight on load
     setTimeout(() => {
       startFlight();
-    }, 3000);
+    }, 2000);
   </script>
 
 </body>
