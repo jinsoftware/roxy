@@ -7,7 +7,7 @@
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to right, #1f1c2c, #928dab);
+      background: linear-gradient(to right, #0f0c29, #302b63, #24243e);
       color: white;
       text-align: center;
     }
@@ -22,6 +22,9 @@
       height: 250px;
       position: relative;
       overflow: hidden;
+      background: #111;
+      border-top: 4px solid #00ffd9;
+      border-bottom: 4px solid #00ffd9;
     }
 
     .plane {
@@ -29,12 +32,6 @@
       position: absolute;
       top: 100px;
       left: 0;
-      animation: flyAnimation linear forwards;
-    }
-
-    @keyframes flyAnimation {
-      0% { left: -100px; }
-      100% { left: 100%; }
     }
 
     .blast {
@@ -44,14 +41,14 @@
 
     @keyframes shake {
       0%, 100% { transform: translate(0, 0); }
-      25% { transform: translate(-4px, 4px); }
-      50% { transform: translate(4px, -4px); }
-      75% { transform: translate(-4px, 4px); }
+      25% { transform: translate(-5px, 5px); }
+      50% { transform: translate(5px, -5px); }
+      75% { transform: translate(-5px, 5px); }
     }
 
-    .timer {
-      font-size: 22px;
-      margin-top: 5px;
+    .timer, #cooldown {
+      font-size: 20px;
+      margin-top: 10px;
       color: #ffe600;
     }
 
@@ -75,18 +72,13 @@
     }
 
     button:hover {
-      background-color: #00c4a4;
+      background-color: #00c6a7;
     }
 
     #result {
       font-size: 22px;
       margin-top: 15px;
       font-weight: bold;
-    }
-
-    #cooldown {
-      font-size: 20px;
-      color: #ffe600;
     }
   </style>
 </head>
@@ -107,98 +99,117 @@
     <div id="cooldown"></div>
   </div>
 
-  <!-- Blast Sound -->
   <audio id="blastSound" preload="auto">
     <source src="https://www.soundjay.com/explosion/explosion-01.mp3" type="audio/mpeg">
   </audio>
 
   <script>
     let betCount = 0;
-    let flightInProgress = false;
+    let flightInterval;
+    let canBet = false;
+    let userPrediction = null;
     let flightTimer = 0;
     let timerInterval;
-    let userPrediction = null;
+    const plane = document.getElementById("plane");
 
-    function resetUI() {
-      document.getElementById("plane").className = "plane";
-      document.getElementById("plane").style.animation = "flyAnimation linear forwards";
-      document.getElementById("plane").style.animationDuration = "0s"; // reset duration
-      document.getElementById("plane").textContent = "🛩️";
-      document.getElementById("flightTimer").textContent = "⏱️ Time: 0s";
-      document.getElementById("result").textContent = "";
-      userPrediction = null;
+    function resetPlane() {
+      plane.style.left = "0px";
+      plane.textContent = "🛩️";
+      plane.classList.remove("blast");
     }
 
     function placeBet() {
-      if (flightInProgress) {
+      if (!canBet) {
         document.getElementById("result").textContent = "⛔ Can't bet now! Try in next flight.";
         return;
       }
 
-      const time = parseInt(document.getElementById("userTime").value);
-      if (!time || time < 1 || time > 20) {
-        alert("Enter a valid time between 1 and 20 seconds");
+      const input = parseInt(document.getElementById("userTime").value);
+      if (!input || input < 1 || input > 20) {
+        alert("Enter a valid time between 1 and 20");
         return;
       }
 
-      userPrediction = time;
-      startFlight();
+      userPrediction = input;
+      document.getElementById("result").textContent = "✅ Bet placed!";
     }
 
     function startFlight() {
-      resetUI();
+      resetPlane();
       betCount++;
-      flightInProgress = true;
-      document.getElementById("plane").style.animationDuration = "20s";
+      userPrediction = null;
+      canBet = false;
+      flightTimer = 0;
 
-      let isWinning = betCount % 10 === 0;
-      let blastTime = isWinning ? userPrediction + Math.floor(Math.random() * 2 + 1)
-                                 : Math.max(1, userPrediction - Math.floor(Math.random() * 3 + 1));
+      let pos = 0;
+      const isWinning = betCount % 10 === 0;
+      const blastTime = isWinning
+        ? getUserOrDefault() + Math.floor(Math.random() * 2 + 1)
+        : Math.max(1, getUserOrDefault() - Math.floor(Math.random() * 3 + 1));
+
+      document.getElementById("result").textContent = "";
+      document.getElementById("cooldown").textContent = "";
+      document.getElementById("flightTimer").textContent = "⏱️ Time: 0s";
 
       timerInterval = setInterval(() => {
         flightTimer++;
         document.getElementById("flightTimer").textContent = `⏱️ Time: ${flightTimer}s`;
       }, 1000);
 
+      flightInterval = setInterval(() => {
+        if (pos < window.innerWidth - 100) {
+          pos += 5;
+          plane.style.left = pos + "px";
+        }
+      }, 50);
+
       setTimeout(() => {
+        clearInterval(flightInterval);
         clearInterval(timerInterval);
-        document.getElementById("plane").classList.add("blast");
-        document.getElementById("plane").textContent = "💥";
+        plane.classList.add("blast");
+        plane.textContent = "💥";
         document.getElementById("blastSound").play();
 
-        if ((isWinning && blastTime > userPrediction) || (!isWinning && blastTime <= userPrediction)) {
-          document.getElementById("result").textContent = `🎉 You Won! Blast at ${blastTime}s`;
+        if (userPrediction) {
+          if ((isWinning && blastTime > userPrediction) || (!isWinning && blastTime <= userPrediction)) {
+            document.getElementById("result").textContent = `🎉 You Won! Blast at ${blastTime}s`;
+          } else {
+            document.getElementById("result").textContent = `😞 You Lost! Blast at ${blastTime}s`;
+          }
         } else {
-          document.getElementById("result").textContent = `😞 You Lost! Blast at ${blastTime}s`;
+          document.getElementById("result").textContent = `🕹️ No Bet. Blast at ${blastTime}s`;
         }
 
-        flightInProgress = false;
         startCooldown();
       }, blastTime * 1000);
     }
 
-    function startCooldown() {
-      let cooldown = 5;
-      document.getElementById("cooldown").textContent = `🕒 Next flight in ${cooldown} sec`;
+    function getUserOrDefault() {
+      return userPrediction ? userPrediction : 10;
+    }
 
-      const countdown = setInterval(() => {
-        cooldown--;
-        if (cooldown > 0) {
-          document.getElementById("cooldown").textContent = `🕒 Next flight in ${cooldown} sec`;
+    function startCooldown() {
+      let countdown = 5;
+      document.getElementById("cooldown").textContent = `🕒 Next flight in ${countdown} seconds...`;
+      canBet = true;
+
+      const cd = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+          document.getElementById("cooldown").textContent = `🕒 Next flight in ${countdown} seconds...`;
         } else {
-          clearInterval(countdown);
-          document.getElementById("cooldown").textContent = "✅ Ready!";
-          flightTimer = 0;
-          resetUI();
-          startFlight(); // auto fly
+          clearInterval(cd);
+          document.getElementById("cooldown").textContent = "";
+          canBet = false;
+          startFlight();
         }
       }, 1000);
     }
 
-    // Auto start on load
-    window.onload = () => {
+    // Start first flight after 3s on load
+    setTimeout(() => {
       startFlight();
-    }
+    }, 3000);
   </script>
 
 </body>
