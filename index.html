@@ -74,6 +74,12 @@
       margin-top: 20px;
       font-weight: bold;
     }
+
+    #cooldown {
+      margin-top: 10px;
+      font-size: 20px;
+      color: yellow;
+    }
   </style>
 </head>
 <body>
@@ -86,6 +92,7 @@
     <input type="number" id="userTime" placeholder="e.g., 8" min="1" max="20"/>
     <button onclick="startGame()">Place Bet</button>
     <div id="result"></div>
+    <div id="cooldown"></div>
   </div>
 
   <!-- 🔊 Blast Sound -->
@@ -93,6 +100,8 @@
 
   <script>
     let betCount = 0;
+    let canPlaceBet = true;
+    let cooldownTimer;
 
     function resetPlane() {
       const plane = document.getElementById("plane");
@@ -103,21 +112,28 @@
     }
 
     function startGame() {
-      resetPlane();
+      if (!canPlaceBet) {
+        document.getElementById("result").textContent = "⛔ Time out. Try before next flight.";
+        return;
+      }
+
       const userInput = parseInt(document.getElementById("userTime").value);
       if (!userInput || userInput < 1 || userInput > 20) {
         alert("⛔ Enter valid prediction time between 1 and 20 seconds");
         return;
       }
 
+      resetPlane();
+      canPlaceBet = false; // Disable next bet
+
       betCount++;
       const isWinningBet = betCount % 10 === 0;
 
       let blastTime;
       if (isWinningBet) {
-        blastTime = userInput + Math.floor(Math.random() * 3 + 1); // blast after predicted time
+        blastTime = userInput + Math.floor(Math.random() * 3 + 1); // after prediction
       } else {
-        blastTime = Math.max(1, userInput - Math.floor(Math.random() * 3 + 1)); // blast before
+        blastTime = Math.max(1, userInput - Math.floor(Math.random() * 3 + 1)); // before
       }
 
       const plane = document.getElementById("plane");
@@ -125,22 +141,39 @@
       plane.style.left = "90%";
 
       document.getElementById("result").textContent = "🚀 Plane is flying...";
+      document.getElementById("cooldown").textContent = "";
 
       setTimeout(() => {
-        // Play explosion sound
         document.getElementById("blastSound").play();
 
-        // Blast effect
         plane.classList.add("blast");
         plane.textContent = "💥";
 
-        // Show result
         if ((isWinningBet && blastTime > userInput) || (!isWinningBet && blastTime <= userInput)) {
           document.getElementById("result").textContent = `🎉 You Won! Plane blasted at ${blastTime}s`;
         } else {
           document.getElementById("result").textContent = `😞 You Lost! Plane blasted at ${blastTime}s`;
         }
+
+        startCooldown(); // Start 5 sec timer after explosion
       }, blastTime * 1000);
+    }
+
+    function startCooldown() {
+      let countdown = 5;
+      document.getElementById("cooldown").textContent = `🕒 Next flight in ${countdown} seconds...`;
+
+      cooldownTimer = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+          document.getElementById("cooldown").textContent = `🕒 Next flight in ${countdown} seconds...`;
+        } else {
+          clearInterval(cooldownTimer);
+          document.getElementById("cooldown").textContent = "✅ Ready for next flight!";
+          canPlaceBet = true;
+          resetPlane();
+        }
+      }, 1000);
     }
   </script>
 
