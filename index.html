@@ -8,21 +8,40 @@
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      background: radial-gradient(#1f1f1f, #121212);
       color: white;
       text-align: center;
+      overflow: hidden;
+    }
+
+    h1 {
+      margin-top: 20px;
     }
 
     .plane {
       font-size: 40px;
       position: absolute;
-      top: 100px;
+      top: 150px;
       left: 0;
-      transition: left 10s linear;
+      transition: left linear;
+    }
+
+    .blast {
+      font-size: 40px;
+      color: red;
+      animation: shake 0.3s infinite;
+    }
+
+    @keyframes shake {
+      0% { transform: translate(0, 0); }
+      25% { transform: translate(-3px, 3px); }
+      50% { transform: translate(3px, -3px); }
+      75% { transform: translate(-3px, 3px); }
+      100% { transform: translate(0, 0); }
     }
 
     .controls {
-      margin-top: 200px;
+      margin-top: 250px;
     }
 
     input, button {
@@ -53,34 +72,51 @@
   <script>
     let betCount = 0;
 
+    function resetPlane() {
+      const plane = document.getElementById("plane");
+      plane.classList.remove("blast");
+      plane.textContent = "✈️";
+      plane.style.left = "0%";
+      plane.style.transitionDuration = "0s";
+    }
+
     function startGame() {
+      resetPlane();
       const userInput = parseInt(document.getElementById("userTime").value);
       if (!userInput || userInput < 1 || userInput > 20) {
-        alert("Please enter a valid time between 1 and 20 seconds");
+        alert("Enter valid prediction time between 1 and 20 seconds");
         return;
       }
 
       betCount++;
-      let isWinningBet = betCount % 10 === 0; // 1 out of every 10 is winning
+      const isWinningBet = betCount % 10 === 0;
 
-      let blastTime = isWinningBet ? userInput + 1 : userInput - 1;
-      if (blastTime <= 0) blastTime = 1 + Math.floor(Math.random() * 5);
+      let blastTime;
+      if (isWinningBet) {
+        blastTime = userInput + Math.floor(Math.random() * 5 + 1); // Plane blasts **after** prediction
+      } else {
+        blastTime = Math.max(1, userInput - Math.floor(Math.random() * 3 + 1)); // Plane blasts **before**
+      }
+
+      const plane = document.getElementById("plane");
+      plane.style.transitionDuration = `${blastTime}s`;
+      plane.style.left = "90%";
 
       document.getElementById("result").textContent = "🚀 Plane is flying...";
 
-      const plane = document.getElementById("plane");
-      plane.style.transition = `left ${blastTime}s linear`;
-      plane.style.left = "90%";
-
       setTimeout(() => {
-        plane.style.left = "0%";
+        // blast effect
+        plane.classList.add("blast");
+        plane.textContent = "💥";
+
         if ((isWinningBet && blastTime > userInput) || (!isWinningBet && blastTime <= userInput)) {
-          document.getElementById("result").textContent = "🎉 You Won! Plane blasted as predicted.";
+          document.getElementById("result").textContent = `🎉 You Won! Plane blasted at ${blastTime}s`;
         } else {
-          document.getElementById("result").textContent = `💥 You Lost! Plane blasted at ${blastTime}s.`;
+          document.getElementById("result").textContent = `😞 You Lost! Plane blasted at ${blastTime}s`;
         }
       }, blastTime * 1000);
     }
   </script>
+
 </body>
 </html>
