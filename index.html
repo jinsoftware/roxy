@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Aviator Game</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: white;
+      text-align: center;
+    }
+
+    .plane {
+      font-size: 40px;
+      position: absolute;
+      top: 100px;
+      left: 0;
+      transition: left 10s linear;
+    }
+
+    .controls {
+      margin-top: 200px;
+    }
+
+    input, button {
+      padding: 10px;
+      font-size: 18px;
+      margin: 5px;
+    }
+
+    #result {
+      font-size: 24px;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>✈️ Aviator Betting Game</h1>
+  <div class="plane" id="plane">✈️</div>
+
+  <div class="controls">
+    <label>Predict Blast Time (in seconds):</label>
+    <input type="number" id="userTime" placeholder="e.g., 8" min="1" max="20"/>
+    <button onclick="startGame()">Place Bet</button>
+    <div id="result"></div>
+  </div>
+
+  <script>
+    let betCount = 0;
+
+    function startGame() {
+      const userInput = parseInt(document.getElementById("userTime").value);
+      if (!userInput || userInput < 1 || userInput > 20) {
+        alert("Please enter a valid time between 1 and 20 seconds");
+        return;
+      }
+
+      betCount++;
+      let isWinningBet = betCount % 10 === 0; // 1 out of every 10 is winning
+
+      let blastTime = isWinningBet ? userInput + 1 : userInput - 1;
+      if (blastTime <= 0) blastTime = 1 + Math.floor(Math.random() * 5);
+
+      document.getElementById("result").textContent = "🚀 Plane is flying...";
+
+      const plane = document.getElementById("plane");
+      plane.style.transition = `left ${blastTime}s linear`;
+      plane.style.left = "90%";
+
+      setTimeout(() => {
+        plane.style.left = "0%";
+        if ((isWinningBet && blastTime > userInput) || (!isWinningBet && blastTime <= userInput)) {
+          document.getElementById("result").textContent = "🎉 You Won! Plane blasted as predicted.";
+        } else {
+          document.getElementById("result").textContent = `💥 You Lost! Plane blasted at ${blastTime}s.`;
+        }
+      }, blastTime * 1000);
+    }
+  </script>
+</body>
+</html>
