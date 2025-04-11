@@ -3,27 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Aviator Boom Game</title>
+  <title>MACS AViater BeT</title>
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom, #141e30, #243b55);
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
       color: white;
       text-align: center;
       overflow: hidden;
     }
 
     h1 {
-      margin-top: 30px;
-      font-size: 36px;
-      color: #00ffd9;
+      margin-top: 25px;
+      font-size: 40px;
+      color: #00ffe1;
+      letter-spacing: 2px;
+      text-shadow: 2px 2px 5px #000;
     }
 
     .plane {
-      font-size: 40px;
+      font-size: 50px;
       position: absolute;
-      top: 120px;
+      top: 150px;
       left: 0;
       transition: left linear;
     }
@@ -35,9 +37,9 @@
 
     @keyframes shake {
       0%, 100% { transform: translate(0, 0); }
-      25% { transform: translate(-5px, 5px); }
-      50% { transform: translate(5px, -5px); }
-      75% { transform: translate(-5px, 5px); }
+      25% { transform: translate(-6px, 6px); }
+      50% { transform: translate(6px, -6px); }
+      75% { transform: translate(-6px, 6px); }
     }
 
     .controls {
@@ -50,12 +52,12 @@
       padding: 12px 20px;
       font-size: 18px;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       margin: 8px;
     }
 
     input {
-      width: 200px;
+      width: 220px;
     }
 
     button {
@@ -63,45 +65,50 @@
       color: black;
       cursor: pointer;
       font-weight: bold;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
     }
 
     button:hover {
-      background-color: #00c6a7;
+      background-color: #00c9ad;
     }
 
     #result {
       font-size: 22px;
       margin-top: 20px;
       font-weight: bold;
+      color: #fff;
     }
 
     #cooldown {
       margin-top: 10px;
       font-size: 20px;
-      color: yellow;
+      color: #ffe600;
     }
   </style>
 </head>
 <body>
 
-  <h1>✈️ Aviator Boom Game</h1>
+  <h1>💸 MACS AViater BeT 🎰</h1>
   <div class="plane" id="plane">✈️</div>
 
   <div class="controls">
     <label for="userTime">Predict Blast Time (in seconds):</label><br/>
     <input type="number" id="userTime" placeholder="e.g., 8" min="1" max="20"/>
-    <button onclick="startGame()">Place Bet</button>
+    <button onclick="placeBet()">Place Bet</button>
     <div id="result"></div>
     <div id="cooldown"></div>
   </div>
 
   <!-- 🔊 Blast Sound -->
-  <audio id="blastSound" src="https://www.soundjay.com/explosion/explosion-02.mp3" preload="auto"></audio>
+  <audio id="blastSound" preload="auto">
+    <source src="https://assets.mixkit.co/sfx/preview/mixkit-explosion-1612.mp3" type="audio/mpeg">
+  </audio>
 
   <script>
     let betCount = 0;
     let canPlaceBet = true;
     let cooldownTimer;
+    let currentUserTime = null;
 
     function resetPlane() {
       const plane = document.getElementById("plane");
@@ -111,7 +118,7 @@
       plane.style.transitionDuration = "0s";
     }
 
-    function startGame() {
+    function placeBet() {
       if (!canPlaceBet) {
         document.getElementById("result").textContent = "⛔ Time out. Try before next flight.";
         return;
@@ -123,9 +130,13 @@
         return;
       }
 
-      resetPlane();
-      canPlaceBet = false; // Disable next bet
+      currentUserTime = userInput;
+      canPlaceBet = false;
+      startFlight(userInput);
+    }
 
+    function startFlight(userInput) {
+      resetPlane();
       betCount++;
       const isWinningBet = betCount % 10 === 0;
 
@@ -145,17 +156,16 @@
 
       setTimeout(() => {
         document.getElementById("blastSound").play();
-
         plane.classList.add("blast");
         plane.textContent = "💥";
 
-        if ((isWinningBet && blastTime > userInput) || (!isWinningBet && blastTime <= userInput)) {
+        if ((isWinningBet && blastTime > currentUserTime) || (!isWinningBet && blastTime <= currentUserTime)) {
           document.getElementById("result").textContent = `🎉 You Won! Plane blasted at ${blastTime}s`;
         } else {
           document.getElementById("result").textContent = `😞 You Lost! Plane blasted at ${blastTime}s`;
         }
 
-        startCooldown(); // Start 5 sec timer after explosion
+        startCooldown(); // Auto restart
       }, blastTime * 1000);
     }
 
@@ -171,7 +181,17 @@
           clearInterval(cooldownTimer);
           document.getElementById("cooldown").textContent = "✅ Ready for next flight!";
           canPlaceBet = true;
-          resetPlane();
+          if (currentUserTime) {
+            setTimeout(() => {
+              if (canPlaceBet) {
+                currentUserTime = null;
+                document.getElementById("result").textContent = "💡 New round started. Place your bet!";
+                resetPlane();
+                document.getElementById("plane").style.transitionDuration = "0s";
+                document.getElementById("plane").style.left = "0%";
+              }
+            }, 1000);
+          }
         }
       }, 1000);
     }
